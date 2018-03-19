@@ -19,14 +19,14 @@ import org.xml.sax.SAXException;
 public class DomParserOperator {
 	private class CacheData {
 		private Map<String, String> mapAttr;
-		private Map<String, Object> mapChild;
+		private Map<String, CacheData> mapChild;
 		
 		private String val = null;
 		private String nodeName = "";
 		
 		CacheData(String name) {
 			mapAttr = new HashMap<String, String>();
-			mapChild = new HashMap<String, Object>();
+			mapChild = new HashMap<String, CacheData>();
 			
 			this.nodeName = name;
 		}
@@ -35,15 +35,19 @@ public class DomParserOperator {
 			this.mapAttr = map;
 		}
 		
-		private void setChildMap(Map<String, Object> map) {
+		private void setChildMap(Map<String, CacheData> map) {
 			this.mapChild = map;
+		}
+		
+		private Map<String, CacheData> getChildMap() {
+			return this.mapChild;
 		}
 	}
 	
-	private Document doc;
-	private String path = "D:\\test.xml";
+	private Document doc = null;
+	private String path = "";
 	
-	private Map<String, Object> mapData = new HashMap<String, Object> ();
+	private CacheData cacheData = null;
 	
 	public DomParserOperator(String path) {
 		setPath(path);
@@ -58,7 +62,7 @@ public class DomParserOperator {
 		try {
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			this.doc = db.parse(path);
-			NodeList nodelist = doc.getElementsByTagName("test");
+			NodeList nodelist = doc.getElementsByTagName("book");
 			System.out.println("nodelength: " + nodelist.getLength());
 
 			for (int i = 0; i < nodelist.getLength(); i++) {
@@ -79,9 +83,20 @@ public class DomParserOperator {
 				for (int j = 0; j < subNode.getLength(); j++) {
 					Node n = subNode.item(j);
 					if (n.getNodeType() == Node.ELEMENT_NODE) {
-						System.out.print("n localname: " + n.getLocalName());
+						System.out.print("Element localname: " + n.getLocalName());
 						System.out.print(" xx nodename: " + n.getNodeName());
 						System.out.print(" xx val: " + n.getFirstChild().getNodeValue());
+						System.out.println(" xx textcontent: " + n.getTextContent());
+					}
+					else if (n.getNodeType() == Node.COMMENT_NODE) {
+						System.out.print("Comment localname: " + n.getLocalName());
+						System.out.print(" xx nodename: " + n.getNodeName());
+						System.out.println(" xx textcontent: " + n.getTextContent());
+					}
+					else {
+						System.out.print("Other localname: " + n.getLocalName());
+						System.out.print(" xx nodename: " + n.getNodeName());
+						System.out.print(" xx val: " + n.getNodeValue());
 						System.out.println(" xx textcontent: " + n.getTextContent());
 					}
 				}
@@ -95,19 +110,13 @@ public class DomParserOperator {
 		}
 	}
 	
-	public void parse() {
+	public void load() {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		try {
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			this.doc = db.parse(path);
 
-			NodeList nodeList = doc.getDocumentElement().getChildNodes();
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				Node node = nodeList.item(i);
-				print("node", node);
-
-				parse(node, mapData);
-			}
+			cacheData = parse(doc.getDocumentElement());
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
 		} catch (SAXException e) {
@@ -117,7 +126,7 @@ public class DomParserOperator {
 		}
 	}
 	
-	private Object parse(Node node, Map<String, Object> map) {
+	private CacheData parse(Node node) {
 		CacheData data = null;
 		
 		if (node.hasAttributes()) {
@@ -132,50 +141,28 @@ public class DomParserOperator {
 		if (node.hasChildNodes()) {
 			/* 拥有子节点 */
 			NodeList childNodes_ = node.getChildNodes();
-			Map<String, Object> mapChild_ = new HashMap<String, Object>();
-			boolean hasElement = false;
 			for (int cInd = 0; cInd < childNodes_.getLength(); cInd ++) {
 				Node child_ = childNodes_.item(cInd);
 				
-				if (child_.getNodeType() == Node.TEXT_NODE) {
+				if (child_.getNodeType() == Node.TEXT_NODE && !child_.getNodeName().equals("#text")) {
 					data = data == null ? new CacheData(node.getNodeName()) : data;
 					data.val = child_.getNodeValue();
-					
-					break;
 				}
 				
-				if (child_.getNodeType() != Node.ELEMENT_NODE) {
+				if (child_.getNodeType() == Node.COMMENT_NODE) {
+					/* 注释行 */
 					continue;
 				}
-
-				mapChild_.put(child_.getNodeName(), parse(child_, map));
-				
-				hasElement = true;
-				
-//				Object obj = parse(child_, map);
-//
-//				mapChild_.put(child_.getNodeName(), obj);
-//				
-//				if (obj.getClass().getTypeName().equals("java.util.Map")) {
-//					/* 有子节点或属性 */
-//					mapChild_.put(child_.getNodeName(), obj);
-//				}
-//				else if (obj.getClass().getTypeName().equals("java.lang.String")) {
-//					/* 无子节点 */
-//					String val_ = (String) obj;
-//				}
-			}
-
-			if (hasElement) {
-				if (data != null) {
-					data = new CacheData(node.getNodeName());
+				else if (child_.getNodeType() == Node.ELEMENT_NODE) {
+					if (data != null) {
+						data = new CacheData(node.getNodeName());
+					}
+					data.getChildMap().put(child_.getNodeName(), parse(child_));
 				}
-	
-				data.setChildMap(mapChild_);
 			}
 		}
 		
-		return data;
+		return data;// 有可能为null
 	}
 	
 	private Map<String, String> parseAttr(NamedNodeMap attrs) {
@@ -198,13 +185,13 @@ public class DomParserOperator {
 	}
 	
 	public static void main(String[] args) {
-		System.err.println(String.class.getTypeName());
+		System.err.println(String.class.getName());
 		
-//		DomParserOperator d = new DomParserOperator("D:\\test.xml");
-//		d.parseTest();
+		DomParserOperator d = new DomParserOperator("D:\\test.xml");
+		d.parseTest();
 		
-//		if (true)
-//			return;
+		if (true)
+			return;
 		
 		//创建一个DocumentBuilderFactory的对象
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
