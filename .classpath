@@ -3,5 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="lib" path="D:/JavaTest/ServerJava/lib/mysql-5.1.14.jar"/>
+	<classpathentry kind="lib" path="D:/JavaTest/ServerJava/lib/dom4j-2.0.2.jar" sourcepath="D:/JavaTest/ServerJava/javadoc/dom4j-2.0.2-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

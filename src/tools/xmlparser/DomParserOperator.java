@@ -219,38 +219,38 @@ public class DomParserOperator {
 			return;
 		}
 		
-		System.out.println("############ NodeName: " + cacheData.nodeName + " print started! ###########");
+//		System.out.println("############ NodeName: " + cacheData.nodeName + " print started! ###########");
 		
 		Map<String, String> mapA = cacheData.getAttrMap();
 		if (mapA != null) {
-			System.out.println("--------------- Attribute Start ---------------");
+//			System.out.println("--------------- Attribute Start ---------------");
 			Iterator<Entry<String, String>> itor = mapA.entrySet().iterator();
 			while (itor.hasNext()) {
 				Entry<String, String> entry = itor.next();
 				System.out.println("attrName: " + entry.getKey() + " ----- attrVal: " + entry.getValue());
 			}
-			System.out.println("--------------- Attribute End ---------------");
+//			System.out.println("--------------- Attribute End ---------------");
 		}
 		
 		Map<String, CacheData> mapC = cacheData.getChildMap();
 		if (mapC != null) {
-			System.out.println("--------------- Child Start ---------------");
+//			System.out.println("--------------- Child Start ---------------");
 			Iterator<Entry<String, CacheData>> itor = mapC.entrySet().iterator();
 			while (itor.hasNext()) {
 				Entry<String, CacheData> entry = itor.next();
 				CacheData c = entry.getValue();
 				printCacheData(c);
 			}
-			System.out.println("--------------- Child End ---------------");
+//			System.out.println("--------------- Child End ---------------");
 		}
 		
 		if (cacheData.val != null) {
-			System.out.println("--------------- Val Start ---------------");
+//			System.out.println("--------------- Val Start ---------------");
 			System.out.println("valName: " + cacheData.nodeName + " ----- valVal: " + cacheData.val);
-			System.out.println("--------------- Val End ---------------");
+//			System.out.println("--------------- Val End ---------------");
 		}
 		
-		System.out.println("############ NodeName: " + cacheData.nodeName + " print End! ###########");
+//		System.out.println("############ NodeName: " + cacheData.nodeName + " print End! ###########");
 	}
 	
 	public static void main(String[] args) {
