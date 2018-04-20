@@ -80,6 +80,10 @@ public class DomParserOperator {
 		this.path = path;
 	}
 	
+	public NodeList getElement(String name) {
+		return doc.getElementsByTagName(name);
+	}
+	
 	public void parseTest() {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		try {

@@ -4,12 +4,19 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.Queue;
 
 public class SqlManager {
-	private static Queue<Connection> connectQueue = new LinkedList<Connection> ();
+	/** 连接最大存在时间 */
+	private static final int maxConnectTime = 3600;
+	/** 连接最大使用次数 */
+	private static final int maxUseTimes = 100;
+	
+	private static Queue<ConnectionObj> connectQueue = new LinkedList<ConnectionObj> ();
 	
 	static {
 	    try {
@@ -20,36 +27,85 @@ public class SqlManager {
 	    }
 	}
 	
+	/* 内部类 */
+	private static class ConnectionObj {
+		private Connection connection;
+		private int timeStamp = 0;
+		private int useCount = 0;
+		
+		private ConnectionObj(Connection c) {
+			this.connection = c;
+			this.timeStamp = (int) Calendar.getInstance().getTimeInMillis();
+		}
+		
+		private boolean isValid() throws SQLException {
+			int now = (int) Calendar.getInstance().getTimeInMillis();
+			if ((now - timeStamp) > maxConnectTime) {
+				return false;
+			}
+			
+			if (useCount >= maxUseTimes) {
+				return false;
+			}
+
+			return !connection.isClosed();
+		}
+		
+		/**
+		 * 增加连接使用次数
+		 */
+		private void addTimes() {
+			this.useCount ++;
+		}
+		
+		private void closeConnection() throws SQLException {
+			this.connection.close();
+		}
+	}
+	
 	public SqlManager() {
 		
 	}
 	
-	public static synchronized Connection getConnection() {
+	public static synchronized ConnectionObj getConnection() {
 		if (connectQueue.isEmpty()) {
 			try {
-				connectQueue.offer(DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/javatest", "javatest", "123456"));
+				Connection c = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/javatest", "javatest", "123456");
+				
+				ConnectionObj cObj = new ConnectionObj(c);
+				connectQueue.offer(cObj);
 			}
 			catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 		
-		Connection connection = connectQueue.poll();
+		ConnectionObj tarConn = connectQueue.poll();
 		try {
-			if (connection.isClosed()) {
-				connection = getConnection();
+			if (!tarConn.isValid()) {
+				tarConn.closeConnection();
+				tarConn = getConnection();
+			}
+			else {
+				tarConn.addTimes();
 			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		return connection;
+
+		return tarConn;
 	}
 	
-	public static synchronized void putConnection(Connection connection) {
+	public static synchronized void putConnection(ConnectionObj cObj) {
 		try {
-			connectQueue.offer(connection);
+			if (cObj.isValid()) {
+				connectQueue.add(cObj);
+			}
+		}
+		catch (IllegalStateException e) {
+			System.out.println("线程池容量超出界限！");
+			e.printStackTrace();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -57,7 +113,7 @@ public class SqlManager {
 	}
 	
 	public static void main(String[] args) {
-		Connection connection = SqlManager.getConnection();
+		ConnectionObj cObj = SqlManager.getConnection();
 		try {
 			/* 增 */
 //			String strSql = "insert into test (pk,account,name,face,createdata) values (?,?,?,?,current_date())";
@@ -97,7 +153,7 @@ public class SqlManager {
 //			pst_update.close();
 			
 			/* 查 */
-			Statement statement = connection.createStatement();
+			Statement statement = cObj.connection.createStatement();
 			try {
 				ResultSet res = statement.executeQuery("select * from test");
 				while (res.next()) {
@@ -118,7 +174,7 @@ public class SqlManager {
 			e.printStackTrace();
 		}
 		finally {
-			SqlManager.putConnection(connection);
+			SqlManager.putConnection(cObj);
 		}
 	}
 }
